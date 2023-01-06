@@ -3,27 +3,39 @@
 #define _USE_MATH_DEFINES 
 #include <math.h>
 
-const int Global_Scale = 3;
+const int Global_Scale = 5;
 const int Brick_Width = 15;
 const int Brick_Height = 7;
 const int Cell_Width = 16;
 const int Cell_Height = 8;
 const int Level_X_Offset = 8;
 const int Level_Y_Offset = 6;
+const int Level_Width = 14; // Level width by cells
+const int Level_Hieght = 12; // Level height by cells
 const int Circle_Size = 7;
+const int Platform_Y_Pos = 185;
+const int Platform_Height = 7;
+const COLORREF Blue_Color = RGB(85, 255, 255);
+const COLORREF Red_Color = RGB(255, 85, 85);
+const COLORREF Dark_Red_Color = RGB(151, 0, 0);
+const COLORREF Dark_Blue_Color = RGB(0, 128, 192);
+const COLORREF White_Color = RGB(255, 255, 255);
+const COLORREF BG_Color = RGB(15, 15, 31);
 
 int Inner_Width = 21;
+int Platform_X_Pos = 0;
+int Platform_X_Step = Global_Scale * 2;
+int Platform_Width = 28;
 
-HPEN Brick_Red_Pen, Brick_Blue_Pen, Platform_Circle_Pen, Platform_Inner_Pen, Highlight_Pen, Letter_Pen;
-HBRUSH Brick_Red_Brush, Brick_Blue_Brush, Platform_Circle_Brush, Platform_Inner_Brush;
+HPEN Brick_Red_Pen, Brick_Blue_Pen, Platform_Circle_Pen, Platform_Inner_Pen, Highlight_Pen, Letter_Pen, BG_Pen;
+HBRUSH Brick_Red_Brush, Brick_Blue_Brush, Platform_Circle_Brush, Platform_Inner_Brush, BG_Brush;
 
-COLORREF Blue_Color = RGB(85, 255, 255);
-COLORREF Red_Color = RGB(255, 85, 85);
-COLORREF Dark_Red_Color = RGB(151, 0, 0);
-COLORREF Dark_Blue_Color = RGB(0, 128, 192);
-COLORREF White_Color = RGB(255, 255, 255);
+HWND HWnd;
 
-char Level_01[14][12] =
+RECT Platform_Rect, Prev_Platform_Rect;
+RECT Level_Rect;
+
+char Level_01[Level_Width][Level_Hieght] =
 {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -66,14 +78,36 @@ void Create_Pen_Brush(COLORREF color, HPEN& pen, HBRUSH& brush)
 	brush = CreateSolidBrush(color);
 }
 
-void Init()
+void Redraw_Platform()
 {
-	Highlight_Pen = CreatePen(PS_SOLID, 0, RGB(255, 255, 255));
-	Letter_Pen = CreatePen(PS_SOLID, Global_Scale, RGB(255, 255, 255));
+	Prev_Platform_Rect = Platform_Rect;
+
+	Platform_Rect.left = Scale_Value(Level_X_Offset + Platform_X_Pos);
+	Platform_Rect.top = Scale_Value(Platform_Y_Pos);
+	Platform_Rect.right = Platform_Rect.left + Scale_Value(Platform_Width);
+	Platform_Rect.bottom = Platform_Rect.top + Scale_Value(Platform_Height);
+
+	InvalidateRect(HWnd, &Prev_Platform_Rect, FALSE);
+	InvalidateRect(HWnd, &Platform_Rect, FALSE);
+}
+
+void Init_Engine(HWND hWnd)
+{
+	HWnd = hWnd;
+	Highlight_Pen = CreatePen(PS_SOLID, 0, White_Color);
+	Letter_Pen = CreatePen(PS_SOLID, Global_Scale, White_Color);
+	Create_Pen_Brush(BG_Color, BG_Pen, BG_Brush);
 	Create_Pen_Brush(Red_Color, Brick_Red_Pen, Brick_Red_Brush);
 	Create_Pen_Brush(Blue_Color, Brick_Blue_Pen, Brick_Blue_Brush);
 	Create_Pen_Brush(Dark_Red_Color, Platform_Circle_Pen, Platform_Circle_Brush);
 	Create_Pen_Brush(Dark_Blue_Color, Platform_Inner_Pen, Platform_Inner_Brush);
+
+	Level_Rect.left = Scale_Value(Level_X_Offset);
+	Level_Rect.top = Scale_Value(Level_Y_Offset);
+	Level_Rect.right = Level_Rect.left + Scale_Value(Cell_Width * Level_Width);
+	Level_Rect.bottom = Level_Rect.top + Scale_Value(Cell_Height * Level_Hieght);
+
+	Redraw_Platform();
 }
 
 void Draw_Brick(HDC hdc, int x, int y, EBrick_Type brick_type)
@@ -227,6 +261,10 @@ void Draw_Level(HDC hdc)
 
 void Draw_Platform(HDC hdc, int x, int y)
 {
+	SelectObject(hdc, BG_Pen);
+	SelectObject(hdc, BG_Brush);
+	Rectangle(hdc, Prev_Platform_Rect.left, Prev_Platform_Rect.top, Prev_Platform_Rect.right, Prev_Platform_Rect.bottom);
+
 	// Draw circles
 	SelectObject(hdc, Platform_Circle_Pen);
 	SelectObject(hdc, Platform_Circle_Brush);
@@ -249,15 +287,43 @@ void Draw_Platform(HDC hdc, int x, int y)
 	RoundRect(hdc, Scale_Value(x + 4), Scale_Value(y + 1), Scale_Value(x + 4 + Inner_Width - 1), Scale_Value(y + 1 + 5), Scale_Value(3), Scale_Value(3));
 }
 
-void Draw_Frame(HDC hdc)
+void Draw_Frame(HDC hdc, RECT& paint_area)
 {
-	/*Draw_Level(hdc);
+	RECT intersection_rect;
 
-	Draw_Platform(hdc, 50, 100);*/
-	for (int i = 0; i < 16; i++)
+	if (IntersectRect(&intersection_rect, &paint_area, &Level_Rect))
+	Draw_Level(hdc);
+
+
+	if (IntersectRect(&intersection_rect, &paint_area, &Platform_Rect))
+		Draw_Platform(hdc, Level_X_Offset + Platform_X_Pos, Platform_Y_Pos);
+
+
+	/*for (int i = 0; i < 16; i++)
 	{
 		Draw_Brick_Letter(hdc, Scale_Value(20 + i * Cell_Width), 100, EBT_Blue, ELT_O, i);
 		Draw_Brick_Letter(hdc, Scale_Value(20 + i * Cell_Width), 130, EBT_Red, ELT_O, i);
+	}*/
+
+}
+
+int On_Key_Down(EKey_Type key_type)
+{
+	switch (key_type)
+	{
+	case EKT_Left:
+		Platform_X_Pos -= Platform_X_Step;
+		Redraw_Platform();
+		break;
+
+	case EKT_Right:
+		Platform_X_Pos += Platform_X_Step;
+		Redraw_Platform();
+		break;
+
+	case EKT_Space:
+		break;
 	}
 
+	return 0;
 }

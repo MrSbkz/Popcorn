@@ -98,13 +98,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	hInst = hInstance; // Store instance handle in our global variable
 
-	Init();
-
 	RECT window_rect;
 	window_rect.left = 0;
 	window_rect.top = 0;
-	window_rect.right = 320 * 3;
-	window_rect.bottom = 200 * 3;
+	window_rect.right = 320 * 5;
+	window_rect.bottom = 200 * 5;
 
 	AdjustWindowRect(&window_rect, WS_OVERLAPPEDWINDOW, TRUE);
 
@@ -113,6 +111,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	if (hWnd == 0)
 		return FALSE;
+
+	Init_Engine(hWnd);
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
@@ -158,13 +158,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		HDC hdc = BeginPaint(hWnd, &ps);
 		// TODO: Add any drawing code that uses hdc here...
 
-		Draw_Frame(hdc);
+		Draw_Frame(hdc, ps.rcPaint);
 
 		EndPaint(hWnd, &ps);
 	}
 	break;
 	case WM_DESTROY:
 		PostQuitMessage(0);
+		break;
+	case WM_KEYDOWN:
+		switch (wParam)
+		{
+		case VK_LEFT:
+			return On_Key_Down(EKT_Left);
+
+		case VK_RIGHT:
+			return On_Key_Down(EKT_Right);
+
+		case VK_SPACE:
+			return On_Key_Down(EKT_Space);
+
+		default:
+			break;
+		}
 		break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
