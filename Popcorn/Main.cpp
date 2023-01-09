@@ -101,8 +101,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	RECT window_rect;
 	window_rect.left = 0;
 	window_rect.top = 0;
-	window_rect.right = 320 * 5;
-	window_rect.bottom = 200 * 5;
+	window_rect.right = 320 * 3;
+	window_rect.bottom = 200 * 3;
 
 	AdjustWindowRect(&window_rect, WS_OVERLAPPEDWINDOW, TRUE);
 
@@ -152,6 +152,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	}
 	break;
+
 	case WM_PAINT:
 	{
 		PAINTSTRUCT ps;
@@ -163,9 +164,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		EndPaint(hWnd, &ps);
 	}
 	break;
+
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
+
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
@@ -182,6 +185,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		break;
+
+	case WM_TIMER:
+		if (wParam == WM_USER + 1)
+			return On_Timer();
+		break;
+
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
