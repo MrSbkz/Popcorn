@@ -31,6 +31,7 @@ class AsEngine;
 class ALevel;
 class AsPlatform;
 
+
 class ABall
 {
 public:
@@ -53,11 +54,12 @@ private:
 	RECT Ball_Rect, Prev_Ball_Rect;
 };
 
+
 class ALevel
 {
 public:
 	void Init();
-	void Draw_Level(HDC hdc, RECT& paint_area);
+	void Draw(HDC hdc, RECT& paint_area);
 	void Check_Level_Brick_Hit(int& next_y_pos, double& ball_direction);
 
 	static const int Level_Width = 12; // Level width by cells
@@ -80,14 +82,15 @@ private:
 	static const int Brick_Height = 7;
 };
 
+
 class AsPlatform
 {
 public:
 	AsPlatform();
 
 	void Init();
-	void Redraw_Platform(AsEngine* engine);
-	void Draw_Platform(HDC hdc, AsEngine* engine, RECT& paint_area);
+	void Redraw(AsEngine* engine);
+	void Draw(HDC hdc, AsEngine* engine, RECT& paint_area);
 
 	int X_Pos;
 	int X_Step;
@@ -98,13 +101,28 @@ public:
 private:
 	HPEN Platform_Circle_Pen, Platform_Inner_Pen, Highlight_Pen;
 	HBRUSH Platform_Circle_Brush, Platform_Inner_Brush;
-
 	RECT Platform_Rect, Prev_Platform_Rect;
 
 	int Inner_Width;
 
 	static const int Circle_Size = 7;
 	static const int Height = 7;
+};
+
+
+class AsBorder
+{
+public:
+	void Init();
+	void Draw(HDC hdc, RECT& paint_area, AsEngine* engine);
+
+	static const int X_Offset = 6;
+	static const int Y_Offset = 4;
+private:
+	void Draw_Element(HDC hdc, int x, int y, bool top_border, AsEngine* engine);
+
+	HPEN Border_Blue_Pen, Border_White_Pen;
+	HBRUSH Border_Blue_Brush, Border_White_Brush;
 };
 
 class AsEngine
@@ -118,16 +136,13 @@ public:
 
 	static int Scale_Value(int value);
 	static void Create_Pen_Brush(COLORREF color, HPEN& pen, HBRUSH& brush);
-	HWND HWnd;
 
+	HWND HWnd;
 	HPEN BG_Pen;
 	HBRUSH BG_Brush;
 
-
 	static const int Max_X_Pos = ALevel::Level_X_Offset + ALevel::Cell_Width * ALevel::Level_Width;
 	static const int Max_Y_Pos = 199 - ABall::Ball_Size;
-	static const int Border_X_Offset = 6;
-	static const int Border_Y_Offset = 4;
 	static const int Global_Scale = 3;
 	static const COLORREF Blue_Color = RGB(85, 255, 255);
 	static const COLORREF Red_Color = RGB(255, 85, 85);
@@ -137,13 +152,8 @@ public:
 	static const COLORREF BG_Color = RGB(15, 15, 31);
 
 private:
-	void Draw_Border(HDC hdc, int x, int y, bool top_border);
-	void Draw_Bounds(HDC hdc, RECT& paint_area);
-
-	HPEN Border_Blue_Pen, Border_White_Pen;
-	HBRUSH Border_Blue_Brush, Border_White_Brush;
-
 	ABall Ball;
 	ALevel Level;
 	AsPlatform Platform;
+	AsBorder Border;
 };

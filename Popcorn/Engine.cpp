@@ -43,15 +43,15 @@ void ABall::Move(AsEngine* engine, ALevel* level, AsPlatform* platform)
 	next_x_pos = Ball_X_Pos + (int)(Ball_Speed * cos(Ball_Direction));
 	next_y_pos = Ball_Y_Pos - (int)(Ball_Speed * sin(Ball_Direction));
 
-	if (next_x_pos < AsEngine::Border_X_Offset)
+	if (next_x_pos < AsBorder::X_Offset)
 	{
 		next_x_pos = ALevel::Level_X_Offset - (next_x_pos - ALevel::Level_X_Offset);;
 		Ball_Direction = M_PI - Ball_Direction;
 	}
 
-	if (next_y_pos < AsEngine::Border_Y_Offset)
+	if (next_y_pos < AsBorder::Y_Offset)
 	{
-		next_y_pos = AsEngine::Border_Y_Offset - (next_y_pos - AsEngine::Border_Y_Offset);
+		next_y_pos = AsBorder::Y_Offset - (next_y_pos - AsBorder::Y_Offset);
 		Ball_Direction = -Ball_Direction;
 	}
 
@@ -126,6 +126,18 @@ void ALevel::Init()
 	Level_Rect.bottom = Level_Rect.top + AsEngine::Scale_Value(ALevel::Cell_Height * ALevel::Level_Height);
 	AsEngine::Create_Pen_Brush(AsEngine::Red_Color, Brick_Red_Pen, Brick_Red_Brush);
 	AsEngine::Create_Pen_Brush(AsEngine::Blue_Color, Brick_Blue_Pen, Brick_Blue_Brush);
+}
+
+void ALevel::Draw(HDC hdc, RECT& paint_area)
+{
+	RECT intersection_rect;
+
+	if (!IntersectRect(&intersection_rect, &paint_area, &Level_Rect))
+		return;
+
+	for (int i = 0; i < Level_Height; i++)
+		for (int j = 0; j < Level_Width; j++)
+			Draw_Brick(hdc, Level_X_Offset + j * Cell_Width, Level_Y_Offset + i * Cell_Height, (EBrick_Type)Level_01[i][j]);
 }
 
 void ALevel::Draw_Brick(HDC hdc, int x, int y, EBrick_Type brick_type)
@@ -292,25 +304,13 @@ void ALevel::Draw_Brick_Letter(HDC hdc, int x, int y, EBrick_Type brick_type, EL
 	}
 }
 
-void ALevel::Draw_Level(HDC hdc, RECT& paint_area)
-{
-	RECT intersection_rect;
-
-	if (!IntersectRect(&intersection_rect, &paint_area, &Level_Rect))
-		return;
-
-	for (int i = 0; i < Level_Height; i++)
-		for (int j = 0; j < Level_Width; j++)
-			Draw_Brick(hdc, Level_X_Offset + j * Cell_Width, Level_Y_Offset + i * Cell_Height, (EBrick_Type)Level_01[i][j]);
-}
-
 
 
 
 // AsPlatform
 AsPlatform::AsPlatform()
 	:Inner_Width(21),
-	X_Pos(AsEngine::Border_X_Offset),
+	X_Pos(AsBorder::X_Offset),
 	X_Step(AsEngine::Global_Scale * 2),
 	Width(28)
 {
@@ -323,7 +323,7 @@ void AsPlatform::Init()
 	AsEngine::Create_Pen_Brush(AsEngine::Dark_Blue_Color, Platform_Inner_Pen, Platform_Inner_Brush);
 }
 
-void AsPlatform::Redraw_Platform(AsEngine* engine)
+void AsPlatform::Redraw(AsEngine* engine)
 {
 	Prev_Platform_Rect = Platform_Rect;
 
@@ -336,7 +336,7 @@ void AsPlatform::Redraw_Platform(AsEngine* engine)
 	InvalidateRect(engine->HWnd, &Platform_Rect, FALSE);
 }
 
-void AsPlatform::Draw_Platform(HDC hdc, AsEngine* engine, RECT& paint_area)
+void AsPlatform::Draw(HDC hdc, AsEngine* engine, RECT& paint_area)
 {
 	RECT intersection_rect;
 
@@ -372,6 +372,63 @@ void AsPlatform::Draw_Platform(HDC hdc, AsEngine* engine, RECT& paint_area)
 
 
 
+// AsBorder
+void AsBorder::Init()
+{
+	AsEngine::Create_Pen_Brush(AsEngine::Blue_Color, Border_Blue_Pen, Border_Blue_Brush);
+	AsEngine::Create_Pen_Brush(AsEngine::White_Color, Border_White_Pen, Border_White_Brush);
+}
+
+void AsBorder::Draw_Element(HDC hdc, int x, int y, bool top_border, AsEngine* engine)
+{
+	//draw base line
+	SelectObject(hdc, Border_Blue_Pen);
+	SelectObject(hdc, Border_Blue_Brush);
+
+	if (top_border)
+		Rectangle(hdc, AsEngine::Scale_Value(x), AsEngine::Scale_Value(y + 1), AsEngine::Scale_Value(x + 4), AsEngine::Scale_Value(y + 4));
+	else
+		Rectangle(hdc, AsEngine::Scale_Value(x + 1), AsEngine::Scale_Value(y), AsEngine::Scale_Value(x + 4), AsEngine::Scale_Value(y + 4));
+
+	// draw edgin
+	SelectObject(hdc, Border_White_Pen);
+	SelectObject(hdc, Border_White_Brush);
+
+	if (top_border)
+		Rectangle(hdc, AsEngine::Scale_Value(x), AsEngine::Scale_Value(y), AsEngine::Scale_Value(x + 4), AsEngine::Scale_Value(y + 1));
+	else
+		Rectangle(hdc, AsEngine::Scale_Value(x), AsEngine::Scale_Value(y), AsEngine::Scale_Value(x + 1), AsEngine::Scale_Value(y + 4));
+
+	// draw perforation
+	SelectObject(hdc, engine->BG_Pen);
+	SelectObject(hdc, engine->BG_Brush);
+
+	if (top_border)
+		Rectangle(hdc, AsEngine::Scale_Value(x + 2), AsEngine::Scale_Value(y + 2), AsEngine::Scale_Value(x + 3), AsEngine::Scale_Value(y + 3));
+	else
+		Rectangle(hdc, AsEngine::Scale_Value(x + 2), AsEngine::Scale_Value(y + 1), AsEngine::Scale_Value(x + 3), AsEngine::Scale_Value(y + 2));
+}
+
+void AsBorder::Draw(HDC hdc, RECT& paint_area, AsEngine* engine)
+{
+	int i;
+
+	// Left line
+	for (i = 0; i < 50; i++)
+		Draw_Element(hdc, 2, 1 + i * 4, false, engine);
+
+	// Right line
+	for (i = 0; i < 50; i++)
+		Draw_Element(hdc, 201, 1 + i * 4, false, engine);
+
+	// Top line
+	for (i = 0; i < 50; i++)
+		Draw_Element(hdc, 3 + i * 4, 0, true, engine);
+}
+
+
+
+
 
 // AsEngine
 AsEngine::AsEngine()
@@ -382,14 +439,13 @@ void AsEngine::Init_Engine(HWND hWnd)
 {
 	HWnd = hWnd;
 	Create_Pen_Brush(BG_Color, BG_Pen, BG_Brush);
-	Create_Pen_Brush(Blue_Color, Border_Blue_Pen, Border_Blue_Brush);
-	Create_Pen_Brush(White_Color, Border_White_Pen, Border_White_Brush);
 
 	Level.Init();
 	Ball.Init();
 	Platform.Init();
+	Border.Init();
 
-	Platform.Redraw_Platform(this);
+	Platform.Redraw(this);
 
 	SetTimer(HWnd, Timer_ID, 50, 0);
 }
@@ -397,9 +453,9 @@ void AsEngine::Init_Engine(HWND hWnd)
 
 void AsEngine::Draw_Frame(HDC hdc, RECT& paint_area)
 {
-	Level.Draw_Level(hdc, paint_area);
+	Level.Draw(hdc, paint_area);
 
-	Platform.Draw_Platform(hdc, this, paint_area);
+	Platform.Draw(hdc, this, paint_area);
 
 
 	/*for (int i = 0; i < 16; i++)
@@ -410,7 +466,7 @@ void AsEngine::Draw_Frame(HDC hdc, RECT& paint_area)
 
 	Ball.Draw(hdc, paint_area, this);
 
-	Draw_Bounds(hdc, paint_area);
+	Border.Draw(hdc, paint_area, this);
 }
 
 
@@ -421,10 +477,10 @@ int AsEngine::On_Key_Down(EKey_Type key_type)
 	case EKT_Left:
 		Platform.X_Pos -= Platform.X_Step;
 
-		if (Platform.X_Pos <= Border_X_Offset)
-			Platform.X_Pos = Border_X_Offset;
+		if (Platform.X_Pos <= Border.X_Offset)
+			Platform.X_Pos = Border.X_Offset;
 
-		Platform.Redraw_Platform(this);
+		Platform.Redraw(this);
 		break;
 
 	case EKT_Right:
@@ -433,7 +489,7 @@ int AsEngine::On_Key_Down(EKey_Type key_type)
 		if (Platform.X_Pos >= Max_X_Pos - Platform.Width + 1)
 			Platform.X_Pos = Max_X_Pos - Platform.Width + 1;
 
-		Platform.Redraw_Platform(this);
+		Platform.Redraw(this);
 		break;
 
 	case EKT_Space:
@@ -459,51 +515,4 @@ void AsEngine::Create_Pen_Brush(COLORREF color, HPEN& pen, HBRUSH& brush)
 {
 	pen = CreatePen(PS_SOLID, 0, color);
 	brush = CreateSolidBrush(color);
-}
-
-void AsEngine::Draw_Border(HDC hdc, int x, int y, bool top_border)
-{
-	//draw base line
-	SelectObject(hdc, Border_Blue_Pen);
-	SelectObject(hdc, Border_Blue_Brush);
-
-	if (top_border)
-		Rectangle(hdc, Scale_Value(x), Scale_Value(y + 1), Scale_Value(x + 4), Scale_Value(y + 4));
-	else
-		Rectangle(hdc, Scale_Value(x + 1), Scale_Value(y), Scale_Value(x + 4), Scale_Value(y + 4));
-
-	// draw edgin
-	SelectObject(hdc, Border_White_Pen);
-	SelectObject(hdc, Border_White_Brush);
-
-	if (top_border)
-		Rectangle(hdc, Scale_Value(x), Scale_Value(y), Scale_Value(x + 4), Scale_Value(y + 1));
-	else
-		Rectangle(hdc, Scale_Value(x), Scale_Value(y), Scale_Value(x + 1), Scale_Value(y + 4));
-
-	// draw perforation
-	SelectObject(hdc, BG_Pen);
-	SelectObject(hdc, BG_Brush);
-
-	if (top_border)
-		Rectangle(hdc, Scale_Value(x + 2), Scale_Value(y + 2), Scale_Value(x + 3), Scale_Value(y + 3));
-	else
-		Rectangle(hdc, Scale_Value(x + 2), Scale_Value(y + 1), Scale_Value(x + 3), Scale_Value(y + 2));
-}
-
-void AsEngine::Draw_Bounds(HDC hdc, RECT& paint_area)
-{
-	int i;
-
-	// Left line
-	for (i = 0; i < 50; i++)
-		Draw_Border(hdc, 2, 1 + i * 4, false);
-
-	// Right line
-	for (i = 0; i < 50; i++)
-		Draw_Border(hdc, 201, 1 + i * 4, false);
-
-	// Top line
-	for (i = 0; i < 50; i++)
-		Draw_Border(hdc, 3 + i * 4, 0, true);
 }
